@@ -47,6 +47,7 @@ import { ExplorerItem, NewExplorerItem } from 'vs/workbench/contrib/files/common
 import { onUnexpectedError, getErrorMessage } from 'vs/base/common/errors';
 import { asDomUri, triggerDownload } from 'vs/base/browser/dom';
 import { mnemonicButtonLabel } from 'vs/base/common/labels';
+import { IProductService } from 'vs/platform/product/common/productService';
 
 export const NEW_FILE_COMMAND_ID = 'explorer.newFile';
 export const NEW_FILE_LABEL = nls.localize('newFile', "New File");
@@ -124,6 +125,120 @@ export class NewFolderAction extends Action {
 
 	run(): Promise<any> {
 		return this.commandService.executeCommand(NEW_FOLDER_COMMAND_ID);
+	}
+}
+
+export class ShowTestNotificationAction extends Action {
+	public static readonly ID = 'workbench.action.showTestNotification';
+	public static readonly LABEL = nls.localize('showTestNotifcation', "Show Test Notification");
+
+	constructor(
+		id: string,
+		label: string,
+		@INotificationService private readonly notificationService: INotificationService
+	) {
+		super(id, label);
+	}
+
+	public run(): Promise<any> {
+		this.notificationService.prompt(
+			Severity.Info,
+			'This is a test notification',
+			[{ label: 'Button 1', run: () => { } }, { label: 'Button 2', run: () => { } }]);
+
+		return Promise.resolve(null);
+	}
+}
+
+export class ShowInfoDialogAction extends Action {
+	public static readonly ID = 'workbench.action.showInfoDialog';
+	public static readonly LABEL = nls.localize('showInfoDialog', "Show Info Dialog");
+
+	constructor(
+		id: string,
+		label: string,
+		@IDialogService private readonly dialogService: IDialogService
+	) {
+		super(id, label);
+	}
+
+	public run(): Promise<any> {
+		return this.dialogService.show(Severity.Info, 'Do you accept the terms and conditions?', ['&&Yes', 'No'], { cancelId: 1, detail: 'We will own your soul as long as you shall live. No, really, you are going to die here.' });
+	}
+}
+
+export class ShowWarnDialogAction extends Action {
+	public static readonly ID = 'workbench.action.showWarnDialog';
+	public static readonly LABEL = nls.localize('showWarnDialog', "Show Warning Dialog");
+
+	constructor(
+		id: string,
+		label: string,
+		@IDialogService private readonly dialogService: IDialogService
+	) {
+		super(id, label);
+	}
+
+	public run(): Promise<any> {
+		return this.dialogService.show(Severity.Warning, 'I asked you a question.', ['Yes', 'No'], { cancelId: 1, detail: 'This is your final warning. Do you accept the terms and conditions?' });
+	}
+}
+
+export class ShowErrorDialogAction extends Action {
+	public static readonly ID = 'workbench.action.showErrorDialog';
+	public static readonly LABEL = nls.localize('showErrorDialog', "Show Error Dialog");
+
+	constructor(
+		id: string,
+		label: string,
+		@IDialogService private readonly dialogService: IDialogService,
+		@IProductService private readonly productService: IProductService
+	) {
+		super(id, label);
+	}
+
+	public run(): Promise<any> {
+
+		// const longLink = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?response_type=id_token&scope=email+openid+offline_access+api%3a%2f%2f9db1d849-f699-4cfb-8160-64bed3335c72%2fAll+openid+profile&client_id=a3037261-2c94-4a2e-b53f-090f6cdd712a&redirect_uri=https%3a%2f%2fonline.dev.core.vsengsaas.visualstudio.com&state=b4125f25-9253-4ae1-9241-4d7b4b1e4e02&nonce=bab98e7d-7009-425c-9b43-e9cf2d44d940&client_info=1&x-client-SKU=MSAL.JS&x-client-Ver=1.1.1&client-request-id=98d0e4ff-46fd-4e25-841f-226254787dbd&response_mode=fragment&sso_nonce=AQABAAAAAACQN9QBRU3jT6bcBQLZNUj7y-avs8wGsGEHsfxiTBRFvulH4IF_oEhYet2QG368DSsuMUl--M7WJK8xN6oTjumPWEj6tLYUGNGxcnXBLaI-NiAA&mscrid=98d0e4ff-46fd-4e25-841f-226254787dbd';
+		// const shortLink = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize...';
+		const shortLinkExt = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize?...4787dbd';
+
+		// // Option 1
+		// return this.dialogService.show(
+		// 	Severity.Info,
+		// 	nls.localize(
+		// 		'openExternalLinkAt',
+		// 		'Do you want {0} to open the external website?',
+		// 		this.productService.nameShort),
+		// 	[
+		// 		nls.localize('openLink', 'Open Link'),
+		// 		nls.localize('cancel', 'Cancel'),
+		// 		nls.localize('configureTrustedDomains', 'Configure Trusted Domains')
+		// 	],
+		// 	{
+		// 		detail: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?response_type=id_token&scope=email+openid+offline_access+api%3a%2f%2f9db1d849-f699-4cfb-8160-64bed3335c72%2fAll+openid+profile&client_id=a3037261-2c94-4a2e-b53f-090f6cdd712a&redirect_uri=https%3a%2f%2fonline.dev.core.vsengsaas.visualstudio.com&state=b4125f25-9253-4ae1-9241-4d7b4b1e4e02&nonce=bab98e7d-7009-425c-9b43-e9cf2d44d940&client_info=1&x-client-SKU=MSAL.JS&x-client-Ver=1.1.1&client-request-id=98d0e4ff-46fd-4e25-841f-226254787dbd&response_mode=fragment&sso_nonce=AQABAAAAAACQN9QBRU3jT6bcBQLZNUj7y-avs8wGsGEHsfxiTBRFvulH4IF_oEhYet2QG368DSsuMUl--M7WJK8xN6oTjumPWEj6tLYUGNGxcnXBLaI-NiAA&mscrid=98d0e4ff-46fd-4e25-841f-226254787dbd",
+		// 		cancelId: 1
+		// 	}
+		// );
+
+		// Option 2
+		return this.dialogService.show(
+			Severity.Info,
+			nls.localize(
+				'openExternalLinkAt',
+				'Do you want {0} to open the external website?',
+				this.productService.nameShort),
+			[
+				nls.localize('openLink', 'Open Link'),
+				nls.localize('cancel', 'Cancel'),
+				nls.localize('configureTrustedDomains', 'Configure Trusted Domains')
+			],
+			{
+				detail: shortLinkExt,
+				cancelId: 1
+			}
+		);
+
 	}
 }
 

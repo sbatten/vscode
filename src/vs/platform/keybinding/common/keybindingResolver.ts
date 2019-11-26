@@ -9,6 +9,9 @@ import { CommandsRegistry, ICommandHandlerDescription } from 'vs/platform/comman
 import { ContextKeyExpr, IContext, ContextKeyOrExpr } from 'vs/platform/contextkey/common/contextkey';
 import { ResolvedKeybindingItem } from 'vs/platform/keybinding/common/resolvedKeybindingItem';
 import { keys } from 'vs/base/common/map';
+// tslint:disable-next-line: import-patterns layering
+import { Context } from 'vs/platform/contextkey/browser/contextKeyService';
+import { isMacintosh, isLinux, isWindows } from 'vs/base/common/platform';
 
 export interface IResolveResult {
 	enterChord: boolean;
@@ -238,7 +241,15 @@ export class KeybindingResolver {
 	}
 
 	public lookupPrimaryKeybinding(commandId: string): ResolvedKeybindingItem | null {
-		let items = this._lookupMap.get(commandId);
+
+		const ctx = new Context(9999, null);
+		ctx.setValue('isMac', isMacintosh);
+		ctx.setValue('isWindows', isWindows);
+		ctx.setValue('isLinux', isLinux);
+		let items = this._lookupMap.get(commandId)?.filter(item => {
+			return KeybindingResolver.contextMatchesRules(ctx, item.when);
+		});
+
 		if (typeof items === 'undefined' || items.length === 0) {
 			return null;
 		}
@@ -317,7 +328,7 @@ export class KeybindingResolver {
 		if (!rules) {
 			return true;
 		}
-		return rules.evaluate(context);
+		return rules.evaluate(context, ['isMac', 'isWindows', 'isLinux']);
 	}
 
 	public static getAllUnboundCommands(boundCommands: Map<string, boolean>): string[] {

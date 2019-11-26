@@ -156,7 +156,7 @@ export abstract class ContextKeyExpr {
 
 	public abstract getType(): ContextKeyExprType;
 	public abstract equals(other: ContextKeyExpr): boolean;
-	public abstract evaluate(context: IContext): boolean;
+	public abstract evaluate(context: IContext, includeKeys?: string[]): boolean;
 	public abstract serialize(): string;
 	public abstract keys(): string[];
 	public abstract map(mapFnc: IContextKeyExprMapper): ContextKeyExpr;
@@ -218,7 +218,12 @@ export class ContextKeyDefinedExpr implements ContextKeyExpr {
 		return false;
 	}
 
-	public evaluate(context: IContext): boolean {
+	public evaluate(context: IContext, includeKeys?: string[]): boolean {
+		// If the key isn't included, assume it is true
+		if (includeKeys && includeKeys.indexOf(this.key) < 0) {
+			return true;
+		}
+
 		return (!!context.getValue(this.key));
 	}
 
@@ -587,9 +592,17 @@ export class ContextKeyAndExpr implements ContextKeyExpr {
 		return false;
 	}
 
-	public evaluate(context: IContext): boolean {
+	public evaluate(context: IContext, includeKeys?: string[]): boolean {
 		for (let i = 0, len = this.expr.length; i < len; i++) {
-			if (!this.expr[i].evaluate(context)) {
+			// If using include keys, ignore everything that isn't and/or/defined
+			if (includeKeys &&
+				!(this.expr[i] instanceof ContextKeyAndExpr) &&
+				!(this.expr[i] instanceof ContextKeyOrExpr) &&
+				!(this.expr[i] instanceof ContextKeyDefinedExpr)) {
+				continue;
+			}
+
+			if (!this.expr[i].evaluate(context, includeKeys)) {
 				return false;
 			}
 		}
@@ -687,9 +700,17 @@ export class ContextKeyOrExpr implements ContextKeyExpr {
 		return false;
 	}
 
-	public evaluate(context: IContext): boolean {
+	public evaluate(context: IContext, includeKeys?: string[]): boolean {
 		for (let i = 0, len = this.expr.length; i < len; i++) {
-			if (this.expr[i].evaluate(context)) {
+			// If using include keys, ignore everything that isn't and/or/defined
+			if (includeKeys &&
+				!(this.expr[i] instanceof ContextKeyAndExpr) &&
+				!(this.expr[i] instanceof ContextKeyOrExpr) &&
+				!(this.expr[i] instanceof ContextKeyDefinedExpr)) {
+				return true;
+			}
+
+			if (this.expr[i].evaluate(context, includeKeys)) {
 				return true;
 			}
 		}

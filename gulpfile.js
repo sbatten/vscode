@@ -59,6 +59,8 @@ var ALL_EDITOR_TASKS = [
 	'hygiene',
 ];
 
+// don't do this
+
 var runningEditorTasks = process.argv.length > 2 && process.argv.slice(2).every(function (arg) { return (ALL_EDITOR_TASKS.indexOf(arg) !== -1); });
 
 process.on('unhandledRejection', (reason, p) => {

@@ -28,9 +28,11 @@ import { IUriIdentityService } from 'vs/workbench/services/uriIdentity/common/ur
 
 export const WORKSPACE_TRUST_ENABLED = 'security.workspace.trust.enabled';
 export const WORKSPACE_TRUST_STARTUP_PROMPT = 'security.workspace.trust.startupPrompt';
+export const WORKSPACE_TRUST_UNTRUSTED_FILES = 'security.workspace.trust.untrustedFiles';
 export const WORKSPACE_TRUST_EMPTY_WINDOW = 'security.workspace.trust.emptyWindow';
 export const WORKSPACE_TRUST_EXTENSION_SUPPORT = 'extensions.supportUntrustedWorkspaces';
 export const WORKSPACE_TRUST_STORAGE_KEY = 'content.trust.model.key';
+export const WORKSPACE_TRUST_NON_WORKSPACE_FILES_DECISION_KEY = 'security.workspace.trust.nonWorkspaceFiles';
 
 export const WorkspaceTrustContext = {
 	IsTrusted: new RawContextKey<boolean>('isWorkspaceTrusted', false, localize('workspaceTrustCtx', "Whether the current workspace has been trusted by the user."))
@@ -353,6 +355,7 @@ export class WorkspaceTrustRequestService extends Disposable implements IWorkspa
 	constructor(
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IDialogService private readonly dialogService: IDialogService,
+		@IStorageService private readonly storageService: IStorageService,
 		@IWorkspaceContextService private readonly workspaceService: IWorkspaceContextService,
 		@IWorkspaceTrustManagementService private readonly workspaceTrustManagementService: IWorkspaceTrustManagementService
 	) {
@@ -423,6 +426,12 @@ export class WorkspaceTrustRequestService extends Disposable implements IWorkspa
 			return WorkspaceTrustUriResponse.Open;
 		}
 
+		// If user applies choice to all workspaces, don't need to ask again
+		const rememberedChoiceForAllWorkspaces = this.storageService.get(WORKSPACE_TRUST_NON_WORKSPACE_FILES_DECISION_KEY, StorageScope.GLOBAL, undefined) as WorkspaceTrustUriResponse | undefined;
+		if (rememberedChoiceForAllWorkspaces !== undefined) {
+			return rememberedChoiceForAllWorkspaces;
+		}
+
 		const markdownDetails = [
 			this.workspaceService.getWorkbenchState() !== WorkbenchState.EMPTY ?
 				localize('openLooseFileWorkspaceDetails', "You are trying to open untrusted files in a workspace which is trusted.") :
@@ -432,18 +441,27 @@ export class WorkspaceTrustRequestService extends Disposable implements IWorkspa
 
 		const result = await this.dialogService.show(Severity.Info, localize('openLooseFileMesssage', "Do you trust the authors of these files?"), [localize('open', "Open"), localize('newWindow', "Open in New Restricted Mode Window"), localize('cancel', "Cancel")], {
 			cancelId: 2,
+			checkbox: {
+				label: localize('openLooseFileWorkspaceCheckbox', "Remember my decision for all workspaces"),
+				checked: false
+			},
 			custom: {
 				icon: Codicon.shield,
 				markdownDetails: markdownDetails.map(md => { return { markdown: new MarkdownString(md) }; })
 			}
 		});
 
+		const saveResponse = (response: WorkspaceTrustUriResponse) => {
+			this.storageService.store(WORKSPACE_TRUST_NON_WORKSPACE_FILES_DECISION_KEY, response, StorageScope.GLOBAL, StorageTarget.MACHINE);
+			return response;
+		};
+
 		switch (result.choice) {
 			case 0:
 				this.workspaceTrustManagementService.acceptsOutOfWorkspaceFiles = true;
-				return WorkspaceTrustUriResponse.Open;
+				return saveResponse(WorkspaceTrustUriResponse.Open);
 			case 1:
-				return WorkspaceTrustUriResponse.OpenInNewWindow;
+				return saveResponse(WorkspaceTrustUriResponse.OpenInNewWindow);
 			default:
 				return WorkspaceTrustUriResponse.Cancel;
 		}
